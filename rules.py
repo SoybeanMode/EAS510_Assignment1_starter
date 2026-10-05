@@ -127,13 +127,31 @@ def rule3_template(target, input_path):
     out = {"rule": 3, "name": "Template", "fired": False, "score": 0,
            "out_of": 40, "note": "Match score 0.00", "metric": 0.0}
     try:
-        src_g = _gray(target["path"])
-        nd_g = _gray(input_path)
+        src_g = _arr(target["path"])
+        nd_g = _arr(input_path)
+        
         if src_g is None or nd_g is None:
             return out
-        if (src_g.shape[0] < nd_g.shape[0]) or (src_g.shape[1] < nd_g.shape[1]):
-            nd_g = cv2.resize(nd_g, (min(nd_g.shape[1], src_g.shape[1]),
-                                     min(nd_g.shape[0], src_g.shape[0])))
+        
+        #taking a greyscale approach, collapsing rgp values to 1 int brightness value
+        src_g = cv2.cvtColor(src_g, cv2.COLOR_BGR2GRAY)
+        nd_g = cv2.cvtColor(nd_g, cv2.COLOR_BGR2GRAY)
+
+        #gets the larger dimension between HxW, this is finding a scale value to resize to 512
+        scale = 512 / max(src_g.shape)
+
+        # >1 here would enlarge, this rescale preserves size to the initial image allowing content to line up
+        if scale < 1:
+          src_g = cv2.resize(src_g, None, fx=scale, fy=scale)
+          nd_g = cv2.resize(nd_g, None, fx=scale, fy=scale)
+
+        if nd_g.shape[0] > src_g.shape[0] or nd_g.shape[1] > src_g.shape[1]:
+          return out
+
+        # if (src_g.shape[0] < nd_g.shape[0]) or (src_g.shape[1] < nd_g.shape[1]):
+        #     nd_g = cv2.resize(nd_g, (min(nd_g.shape[1], src_g.shape[1]),
+        #                              min(nd_g.shape[0], src_g.shape[0])))
+
         res = cv2.matchTemplate(src_g, nd_g, cv2.TM_CCOEFF_NORMED)
         metric = float(res.max())
         out["metric"] = round(max(0.0, min(1.0, metric)), 3)
